@@ -30,6 +30,15 @@ from moviepy.video.tools import subtitles
 from app.config import config
 from app.utils import utils
 
+# Import gTTS
+try:
+    from gtts import gTTS
+    GTTS_AVAILABLE = True
+    logger.info("gTTS is available")
+except ImportError as e:
+    GTTS_AVAILABLE = False
+    logger.warning(f"gTTS not available: {e}")
+
 # Import Chatterbox TTS and WhisperX if available
 try:
     from chatterbox.tts import ChatterboxTTS
@@ -106,6 +115,52 @@ def get_chatterbox_voices() -> list[str]:
                 voices.append(f"chatterbox:clone:{name}-Custom")
     
     return voices
+
+
+def get_gtts_voices() -> list[str]:
+    """
+    获取gTTS的声音列表
+    
+    Returns:
+        声音列表，格式为 ["gtts:en:English-US", "gtts:vi:Vietnamese", ...]
+    """
+    if not GTTS_AVAILABLE:
+        return []
+    
+    # gTTS supported languages with display names
+    # Format: (lang_code, display_name, region)
+    gtts_languages = [
+        ("en", "English", "US"),
+        ("vi", "Vietnamese", "VN"),
+        ("zh-CN", "Chinese", "CN"),
+        ("zh-TW", "Chinese", "TW"),
+        ("ja", "Japanese", "JP"),
+        ("ko", "Korean", "KR"),
+        ("fr", "French", "FR"),
+        ("de", "German", "DE"),
+        ("es", "Spanish", "ES"),
+        ("it", "Italian", "IT"),
+        ("pt", "Portuguese", "PT"),
+        ("ru", "Russian", "RU"),
+        ("ar", "Arabic", "SA"),
+        ("hi", "Hindi", "IN"),
+        ("th", "Thai", "TH"),
+        ("id", "Indonesian", "ID"),
+        ("ms", "Malay", "MY"),
+        ("fil", "Filipino", "PH"),
+        ("tr", "Turkish", "TR"),
+        ("nl", "Dutch", "NL"),
+        ("pl", "Polish", "PL"),
+        ("sv", "Swedish", "SE"),
+        ("da", "Danish", "DK"),
+        ("no", "Norwegian", "NO"),
+        ("fi", "Finnish", "FI"),
+    ]
+    
+    return [
+        f"gtts:{lang}:{name}-{region}"
+        for lang, name, region in gtts_languages
+    ]
 
 
 def get_all_azure_voices(filter_locals=None) -> list[str]:
@@ -1148,6 +1203,11 @@ def is_chatterbox_voice(voice_name: str):
     return voice_name.startswith("chatterbox:")
 
 
+def is_gtts_voice(voice_name: str):
+    """检查是否是gTTS的声音"""
+    return voice_name.startswith("gtts:")
+
+
 def tts(
     text: str,
     voice_name: str,
@@ -1178,6 +1238,16 @@ def tts(
         # Chatterbox TTS with WhisperX timestamps
         # 格式: chatterbox:type:name-Gender
         return chatterbox_tts(text, voice_name, voice_rate, voice_file, voice_volume)
+    elif is_gtts_voice(voice_name):
+        # gTTS
+        # 格式: gtts:lang:name-Region
+        parts = voice_name.split(":")
+        if len(parts) >= 2:
+            lang = parts[1]
+            return gtts_tts(text, lang, voice_rate, voice_file, voice_volume)
+        else:
+            logger.error(f"Invalid gTTS voice name format: {voice_name}")
+            return None
     return azure_tts_v1(text, voice_name, voice_rate, voice_file)
 
 
@@ -1509,6 +1579,132 @@ def chunk_text_for_chatterbox(text: str, max_chunk_size: int = 300) -> list:
         chunks.append(current_chunk.strip())
     
     return chunks
+
+
+def gtts_tts(
+    text: str,
+    lang: str,
+    voice_rate: float,
+    voice_file: str,
+    voice_volume: float = 1.0,
+) -> Union[SubMaker, None]:
+    """
+    使用gTTS生成语音
+
+    Args:
+        text: 要转换为语音的文本
+        lang: 语言代码，如 "en", "vi", "zh-CN"
+        voice_rate: 语音速度（gTTS不直接支持，但可以通过后处理调整）
+        voice_file: 输出的音频文件路径
+        voice_volume: 语音音量
+
+    Returns:
+        SubMaker对象或None
+    """
+    if not GTTS_AVAILABLE:
+        logger.error("gTTS is not available")
+        return None
+    
+    text = text.strip()
+    
+    for i in range(3):  # 尝试3次
+        try:
+            logger.info(f"start gTTS, lang: {lang}, try: {i + 1}")
+            
+            # Create gTTS object
+            # gTTS speed options: slow=True for slower speech, slow=False (default) for normal speed
+            slow = voice_rate < 0.9  # Use slow speech if rate is less than 0.9
+            
+            tts = gTTS(text=text, lang=lang, slow=slow)
+            
+            # Save to file
+            tts.save(voice_file)
+            
+            # Create SubMaker object
+            sub_maker = ensure_submaker_compatibility(SubMaker())
+            
+            # Get audio duration and create subtitles
+            try:
+                from moviepy import AudioFileClip
+                
+                audio_clip = AudioFileClip(voice_file)
+                audio_duration = audio_clip.duration
+                audio_clip.close()
+                
+                # Apply voice rate adjustment if needed (speed up or slow down audio)
+                if voice_rate != 1.0 and voice_rate > 0:
+                    try:
+                        from moviepy.editor import AudioFileClip as EditorAudioClip
+                        
+                        # Load audio
+                        audio = EditorAudioClip(voice_file)
+                        # Adjust speed
+                        audio_adjusted = audio.fx(lambda clip: clip.speedx(voice_rate))
+                        # Write adjusted audio
+                        audio_adjusted.write_audiofile(voice_file, logger=None)
+                        # Update duration
+                        audio_duration = audio_adjusted.duration
+                        audio_adjusted.close()
+                        audio.close()
+                    except Exception as e:
+                        logger.warning(f"Failed to adjust audio speed: {str(e)}")
+                
+                # Apply volume adjustment if needed
+                if voice_volume != 1.0:
+                    try:
+                        from moviepy.editor import AudioFileClip as EditorAudioClip
+                        
+                        audio = EditorAudioClip(voice_file)
+                        audio_adjusted = audio.volumex(voice_volume)
+                        audio_adjusted.write_audiofile(voice_file, logger=None)
+                        audio_adjusted.close()
+                        audio.close()
+                    except Exception as e:
+                        logger.warning(f"Failed to adjust audio volume: {str(e)}")
+                
+                # Convert to 100 nanoseconds unit (edge_tts compatible)
+                audio_duration_100ns = int(audio_duration * 10000000)
+                
+                # Split text into sentences for subtitles
+                sentences = utils.split_string_by_punctuations(text)
+                
+                if sentences:
+                    # Calculate duration for each sentence proportionally
+                    total_chars = sum(len(s) for s in sentences)
+                    char_duration = audio_duration_100ns / total_chars if total_chars > 0 else 0
+                    
+                    current_offset = 0
+                    for sentence in sentences:
+                        if not sentence.strip():
+                            continue
+                        
+                        sentence_chars = len(sentence)
+                        sentence_duration = int(sentence_chars * char_duration)
+                        
+                        sub_maker.subs.append(sentence)
+                        sub_maker.offset.append(
+                            (current_offset, current_offset + sentence_duration)
+                        )
+                        
+                        current_offset += sentence_duration
+                else:
+                    # Use entire text as one subtitle
+                    sub_maker.subs = [text]
+                    sub_maker.offset = [(0, audio_duration_100ns)]
+                
+            except Exception as e:
+                logger.warning(f"Failed to create accurate subtitles: {str(e)}")
+                # Fallback to simple subtitle
+                sub_maker.subs = [text]
+                sub_maker.offset = [(0, 100000000)]  # Default 10 seconds
+            
+            logger.success(f"gTTS succeeded: {voice_file}")
+            return sub_maker
+            
+        except Exception as e:
+            logger.error(f"gTTS failed: {str(e)}")
+    
+    return None
 
 
 def chatterbox_tts(
