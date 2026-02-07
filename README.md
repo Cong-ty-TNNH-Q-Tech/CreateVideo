@@ -1,177 +1,224 @@
-# MoneyPrinterTurbo - Enhanced Fork
+# MoneyPrinterTurbo - Phiên Bản Nâng Cấp
 
-This is an enhanced version of [MoneyPrinterTurbo](https://github.com/harry0703/MoneyPrinterTurbo) with significant improvements to subtitle highlighting and TTS capabilities. Full credit goes to the original author and contributors.
+> **[🌐 Read in English](README_EN.md)** | **[📖 Đọc bản tiếng Việt](README.md)**
 
-## What's Different in This Fork
+Đây là phiên bản nâng cấp của [MoneyPrinterTurbo](https://github.com/harry0703/MoneyPrinterTurbo) với nhiều cải tiến đáng kể về hệ thống phụ đề và khả năng TTS. Xin gửi lời cảm ơn đến tác giả gốc và các cộng tác viên.
 
-### Enhanced Subtitle System
-- **Word-by-word highlighting**: Each word lights up exactly when spoken, making videos more engaging
-- **Real-time synchronization**: Perfect timing with TTS word boundaries
-- **Multi-line support**: Works with wrapped text and complex subtitle layouts
-- **Customizable colors**: Configure highlight colors through the web interface
+## 🌟 Điểm Khác Biệt Trong Phiên Bản Này
 
-### Better Video-Text Matching
-- **Semantic search**: Analyzes script content to find relevant video clips instead of random selection
-- **Text similarity**: Matches video content to script meaning for better relevance
-- **Thumbnail analysis**: Optional video thumbnail similarity for sources like Pexels 
+### Hệ Thống Phụ Đề Nâng Cao
+- **Làm nổi bật từng từ**: Mỗi từ sáng lên chính xác khi được phát âm, tạo video hấp dẫn hơn
+- **Đồng bộ thời gian thực**: Timing hoàn hảo với ranh giới từ của TTS
+- **Hỗ trợ đa dòng**: Hoạt động với văn bản xuống dòng và bố cục phụ đề phức tạp
+- **Màu sắc tùy chỉnh**: Cấu hình màu highlight qua giao diện web
 
-### Open-Source TTS with Voice Cloning
-This fork includes **Chatterbox TTS** - a completely free alternative to Azure TTS that runs locally on your machine.
+### Khớp Video-Văn Bản Thông Minh
+- **Tìm kiếm ngữ nghĩa**: Phân tích nội dung kịch bản để tìm video clip phù hợp thay vì chọn ngẫu nhiên
+- **Độ tương đồng văn bản**: Khớp nội dung video với ý nghĩa kịch bản để đạt độ liên quan cao hơn
+- **Phân tích thumbnail**: Tùy chọn so sánh thumbnail video cho các nguồn như Pexels
 
-**Key advantages:**
-- **No API costs**: Completely free to use, no rate limits
-- **Voice cloning**: Clone any voice using 10-60 seconds of reference audio
-- **Word-level timing**: Perfect subtitle synchronization with WhisperX integration
-- **Automatic speed control**: Configurable speech pacing via environment variables
+### TTS Mã Nguồn Mở với Nhân Bản Giọng Nói
+Fork này bao gồm **Chatterbox TTS** - một giải pháp thay thế hoàn toàn miễn phí cho Azure TTS chạy trên máy của bạn.
 
+**Ưu điểm chính:**
+- **Không mất phí API**: Hoàn toàn miễn phí, không giới hạn tốc độ
+- **Nhân bản giọng nói**: Clone bất kỳ giọng nói nào chỉ với 10-60 giây audio tham khảo
+- **Timing cấp từ**: Đồng bộ phụ đề hoàn hảo với tích hợp WhisperX
+- **Kiểm soát tốc độ tự động**: Điều chỉnh nhịp độ giọng nói qua biến môi trường
 
+### 🎤 Google Translate TTS (gTTS) - Miễn Phí
+Thêm hỗ trợ **gTTS** - giải pháp TTS miễn phí từ Google Translate.
 
-## Example Videos
+**Tính năng:**
+- **Hoàn toàn miễn phí**: Không cần API key, không giới hạn
+- **25+ ngôn ngữ**: Tiếng Việt, Tiếng Anh, Tiếng Trung, Tiếng Nhật, Hàn Quốc, và nhiều hơn nữa
+- **Dễ sử dụng**: Chỉ cần chọn ngôn ngữ và bắt đầu tạo video
+- **Chất lượng ổn định**: Sử dụng công nghệ TTS của Google
 
-See the enhanced features in action:
+**Cách sử dụng gTTS:**
+1. Mở WebUI
+2. Chọn "gTTS (Google Translate TTS - Free)" trong TTS Servers
+3. Chọn ngôn ngữ mong muốn (ví dụ: Vietnamese-VN, English-US)
+4. Tạo video như bình thường
 
-**Full-Length Video Example**
+### 📥 Tải Xuống Video Trực Tiếp
+**Tính năng mới** - Preview và tải video ngay trong giao diện web.
+
+**Tính năng:**
+- **Video player tích hợp**: Xem video ngay sau khi tạo xong
+- **Nút tải xuống**: Download video trực tiếp từ trình duyệt
+- **Hỗ trợ đa ngôn ngữ**: Interface đa ngôn ngữ (VI, EN, CN, DE, PT)
+- **Layout tối ưu**: Hiển thị video và nút download rõ ràng
+
+## 🎬 Video Mẫu
+
+Xem các tính năng nâng cao trong thực tế:
+
+**Video Dài Hoàn Chỉnh**
 
 [![MoneyPrinterTurbo Example Video](https://img.youtube.com/vi/yXc07ROgj80/maxresdefault.jpg)](https://www.youtube.com/watch?v=yXc07ROgj80)
 
-**YouTube Shorts Example**  
+**YouTube Shorts**  
 
 [![MoneyPrinterTurbo Shorts Example](https://img.youtube.com/vi/JBAuXpVHt40/maxresdefault.jpg)](https://www.youtube.com/shorts/JBAuXpVHt40)
 
-**Chatterbox TTS Generated Video**  
+**Video Tạo Bằng Chatterbox TTS**  
 
 [![MoneyPrinterTurbo Chatterbox Example](https://img.youtube.com/vi/ZAttF-cVce8/maxresdefault.jpg)](https://youtube.com/shorts/ZAttF-cVce8?feature=share)
 
-> **Features Showcased**: Natural voice synthesis • Word-level subtitle highlighting • Timing synchronization • Open-source TTS quality
+> **Tính Năng Được Giới Thiệu**: Tổng hợp giọng nói tự nhiên • Highlight phụ đề theo từ • Đồng bộ timing • Chất lượng TTS mã nguồn mở
 
-## 🖼️ Screenshots - Video Generation Setup
+## 🖼️ Ảnh Chụp Màn Hình - Thiết Lập Tạo Video
 
-For complete tranparency and some reprodceability, please see below settings used to generate videos shown above
+Để đảm bảo tính minh bạch và khả năng tái tạo, vui lòng xem các cài đặt được sử dụng để tạo video ở trên
 
 <div align="center">
-<img src="docs/ui_config_1.png" alt="Main Interface" width="800"/>
+<img src="docs/ui_config_1.png" alt="Giao Diện Chính" width="800"/>
 
-<img src="docs/ui_config_2.png" alt="Voice Settings" width="800"/>
+<img src="docs/ui_config_2.png" alt="Cài Đặt Giọng Nói" width="800"/>
 </div>
 
+## 📝 Prompt Hệ Thống
 
-
-## Show Me The Prompt
-
-Here's the exact prompt system we use for generating engaging YouTube content:
+Đây là prompt chính xác mà chúng tôi sử dụng để tạo nội dung YouTube hấp dẫn:
 
 <details>
-<summary><strong>Complete Video Generation Prompt For LLMs of your choice(Click to expand)</strong></summary>
+<summary><strong>Prompt Hoàn Chỉnh Để Tạo Video Cho LLM Của Bạn (Nhấp để mở rộng)</strong></summary>
 
 ```
-ROLE: You are an expert YouTube scriptwriter and content strategist specializing in creating engaging, science-backed content for a broad audience.
+VAI TRÒ: Bạn là một chuyên gia viết kịch bản YouTube và chiến lược nội dung chuyên tạo nội dung hấp dẫn, dựa trên khoa học cho đối tượng rộng.
 
-OBJECTIVE: Generate a complete text-based content package for a 5-minute YouTube video. The goal is to select a single, highly engaging topic and create all the necessary assets to produce the video, optimized for audience retention and YouTube's algorithm.
+MỤC TIÊU: Tạo một gói nội dung văn bản hoàn chỉnh cho video YouTube 5 phút. Mục đích là chọn một chủ đề hấp dẫn và tạo tất cả các tài sản cần thiết để sản xuất video, được tối ưu hóa cho khả năng giữ chân khán giả và thuật toán YouTube.
 
-TOPIC SELECTION CRITERIA:
-• Trending & Relevant: The topic must have high current interest and search volume
-• Broad Appeal: Relatable to a wide audience (productivity, health, personal finance, psychology)
-• Science-Based: Grounded in widely accepted, mainstream scientific consensus
-• Safe & Non-Controversial: Focus on foundational, actionable knowledge
+TIÊU CHÍ CHỌN CHỦ ĐỀ:
+• Trending & Phù Hợp: Chủ đề phải có lượng quan tâm và tìm kiếm cao hiện nay
+• Thu Hút Rộng: Liên quan đến đối tượng rộng (năng suất, sức khỏe, tài chính cá nhân, tâm lý học)
+• Dựa Trên Khoa Học: Căn cứ vào sự đồng thuận khoa học chính thống được chấp nhận rộng rãi
+• An Toàn & Không Gây Tranh Cãi: Tập trung vào kiến thức nền tảng, có thể hành động
 
-REQUIRED DELIVERABLES:
+CÁC KHOẢN GIAO HÀNG YÊU CẦU:
 
-1. Video Title Options (3x)
-   Goal: Create three distinct, clickable YouTube titles optimized for high CTR
-   Style Example: "Rewire Your Anxious Brain in 3 Simple Steps"
+1. Tùy Chọn Tiêu Đề Video (3x)
+   Mục Tiêu: Tạo ba tiêu đề YouTube riêng biệt, có thể click được, tối ưu cho CTR cao
+   Ví Dụ Phong Cách: "Lập Trình Lại Não Bộ Lo Âu Của Bạn Trong 3 Bước Đơn Giản"
 
-2. Full Video Script
-   Length: 800-900 words (~5-minute speaking time)
-   Format: Single paragraph with proper punctuation for TTS optimization
-   Tone: Authoritative yet encouraging, digestible for general audience
-   TTS Optimization: End sentences with definitive punctuation for natural breaks
+2. Kịch Bản Video Đầy Đủ
+   Độ Dài: 800-900 từ (~5 phút nói)
+   Định Dạng: Đoạn văn đơn với dấu câu phù hợp cho tối ưu TTS
+   Tone: Có thẩm quyền nhưng khuyến khích, dễ tiêu hóa cho khán giả chung
+   Tối Ưu TTS: Kết thúc câu với dấu câu rõ ràng cho ngắt nghỉ tự nhiên
 
-3. Pexels Video Search Keywords
-   Structure: Keywords organized by script concepts for visual variety
-   Output: Single line separated by commas
-   Example: brain animation, neural network, person thinking, scrolling on phone
+3. Từ Khóa Tìm Kiếm Video Pexels
+   Cấu Trúc: Từ khóa được tổ chức theo khái niệm kịch bản để đa dạng hình ảnh
+   Đầu Ra: Dòng đơn phân tách bằng dấu phẩy
+   Ví Dụ: brain animation, neural network, person thinking, scrolling on phone
 
-4. YouTube Description & Hashtags
-   Description: SEO-optimized summary (2-3 lines) with clear call-to-action
-   Hashtags: 10-15 relevant hashtags for maximum discoverability
+4. Mô Tả YouTube & Hashtag
+   Mô Tả: Tóm tắt tối ưu SEO (2-3 dòng) với lời kêu gọi hành động rõ ràng
+   Hashtag: 10-15 hashtag liên quan để tối đa khả năng phát hiện
 ```
 </details>
 
-##  Installation
+## 💻 Cài Đặt
 
-**Quick Start (Recommended):**
+**Bắt Đầu Nhanh (Khuyến Nghị):**
 
 ```bash
-# 1. Clone and setup
-git clone https://github.com/harry0703/MoneyPrinterTurbo.git
-cd MoneyPrinterTurbo
+# 1. Clone và thiết lập
+git clone https://github.com/Cong-ty-TNNH-Q-Tech/CreateVideo.git
+cd CreateVideo
 conda env create -f environment.yml
 conda activate MoneyPrinterTurbo
 
-# 2. Install Chatterbox TTS (voice cloning)
+# 2. Cài đặt Chatterbox TTS (nhân bản giọng nói)
 git clone https://github.com/resemble-ai/chatterbox.git
 cd chatterbox && pip install -e . && cd ..
 
-## For CUDA specific setup (if needed)
+# 3. Cài đặt gTTS (TTS miễn phí)
+pip install gTTS==2.5.4
+
+## Cho thiết lập CUDA cụ thể (nếu cần)
 source ./setup_cuda_env.sh    
 ```
 
-**Usage:**
+**Sử Dụng:**
 ```bash
-# Web Interface (Recommended)
+# Giao Diện Web (Khuyến Nghị)
 ./webui.sh            
 
-## Optional: Customize speech speed when using chatter box
-export CHATTERBOX_CFG_WEIGHT=0.1  # Very slow
-export CHATTERBOX_CFG_WEIGHT=0.2  # Slow (default)
-export CHATTERBOX_CFG_WEIGHT=0.3  # Normal speed
+## Tùy Chọn: Tùy chỉnh tốc độ giọng nói khi sử dụng chatterbox
+export CHATTERBOX_CFG_WEIGHT=0.1  # Rất chậm
+export CHATTERBOX_CFG_WEIGHT=0.2  # Chậm (mặc định)
+export CHATTERBOX_CFG_WEIGHT=0.3  # Tốc độ bình thường
 ```
 
-The web interface opens at `http://localhost:8501`
+Giao diện web mở tại `http://localhost:8501`
 
-## 🔧 Troubleshooting
+## 🎨 Các Tùy Chọn TTS Có Sẵn
+
+1. **Azure TTS V1/V2** - TTS chất lượng cao từ Microsoft (cần API key)
+2. **SiliconFlow TTS** - TTS từ SiliconFlow (cần API key)
+3. **Chatterbox TTS** - TTS mã nguồn mở với nhân bản giọng nói (miễn phí, chạy local)
+4. **gTTS** - Google Translate TTS (miễn phí, không cần API key) ✨ MỚI
+
+## 🔧 Xử Lý Sự Cố
 
 <details>
-<summary><strong>Common Issues & Solutions (Click to expand)</strong></summary>
+<summary><strong>Các Vấn Đề Thường Gặp & Giải Pháp (Nhấp để mở rộng)</strong></summary>
 
-**Chatterbox TTS issues:**
-- **Garbled audio**: Text automatically preprocessed and chunked for clarity
-- **CUDA errors**: System automatically falls back to CPU mode
-- **Force CPU mode**: `export CHATTERBOX_DEVICE=cpu`
-- **Voice cloning problems**: Ensure audio is clear and single-speaker
-- **Speed control**: Use `CHATTERBOX_CFG_WEIGHT` environment variable
+**Vấn đề Chatterbox TTS:**
+- **Audio bị loạn**: Văn bản tự động được tiền xử lý và chia nhỏ để rõ ràng hơn
+- **Lỗi CUDA**: Hệ thống tự động chuyển sang chế độ CPU
+- **Buộc chế độ CPU**: `export CHATTERBOX_DEVICE=cpu`
+- **Vấn đề nhân bản giọng nói**: Đảm bảo audio rõ ràng và chỉ có một người nói
+- **Kiểm soát tốc độ**: Sử dụng biến môi trường `CHATTERBOX_CFG_WEIGHT`
 
-**CUDA/cuDNN compatibility issues:**
-- **Error**: `libcudnn_ops_infer.so.8: cannot open shared object file`
-- **Cause**: Missing cuDNN 8.x libraries required by some packages
-- **Solution**: Automatically handled by startup scripts (`setup_cuda_env.sh`)
-- **Manual fix**: `pip install nvidia-cudnn-cu12==8.9.2.26`
+**Vấn đề gTTS:**
+- **Cần kết nối internet**: gTTS sử dụng Google Translate API online
+- **Tốc độ giọng nói**: gTTS có tùy chọn slow (chậm) hoặc normal (bình thường)
+- **Không hỗ trợ điều chỉnh pitch**: gTTS không cho phép thay đổi cao độ giọng nói
 
-**MoviePy TextClip issues:**
-- **Error**: `got an unexpected keyword argument 'align'`
-- **Cause**: Newer MoviePy versions removed the `align` parameter
-- **Solution**: Remove or comment out `align` parameter in `TextClip` calls
+**Vấn đề tương thích CUDA/cuDNN:**
+- **Lỗi**: `libcudnn_ops_infer.so.8: cannot open shared object file`
+- **Nguyên Nhân**: Thiếu thư viện cuDNN 8.x cần thiết cho một số package
+- **Giải Pháp**: Tự động xử lý bởi script khởi động (`setup_cuda_env.sh`)
+- **Fix thủ công**: `pip install nvidia-cudnn-cu12==8.9.2.26`
 
-**General issues:**
-- Check that all dependencies are installed correctly
-- Ensure your Python environment is activated
-- For GPU issues, CPU mode provides a reliable fallback
+**Vấn đề MoviePy TextClip:**
+- **Lỗi**: `got an unexpected keyword argument 'align'`
+- **Nguyên Nhân**: Các phiên bản MoviePy mới hơn đã loại bỏ tham số `align`
+- **Giải Pháp**: Loại bỏ hoặc comment tham số `align` trong các lời gọi `TextClip`
 
-**Advanced CUDA Setup:**
-The project includes automatic CUDA environment configuration:
-- `setup_cuda_env.sh` - Shared CUDA environment setup
-- `webui.sh` - Web interface with CUDA support
+**Vấn đề chung:**
+- Kiểm tra tất cả dependencies đã được cài đặt đúng
+- Đảm bảo môi trường Python của bạn đã được kích hoạt
+- Đối với vấn đề GPU, chế độ CPU cung cấp giải pháp dự phòng đáng tin cậy
 
-If you encounter CUDA library issues, the startup scripts automatically:
-1. Add cuDNN library paths to `LD_LIBRARY_PATH` (Linux) 
-2. Set optimal CUDA memory allocation settings
+**Thiết Lập CUDA Nâng Cao:**
+Dự án bao gồm cấu hình môi trường CUDA tự động:
+- `setup_cuda_env.sh` - Thiết lập môi trường CUDA dùng chung
+- `webui.sh` - Giao diện web với hỗ trợ CUDA
+
+Nếu bạn gặp vấn đề thư viện CUDA, các script khởi động tự động:
+1. Thêm đường dẫn thư viện cuDNN vào `LD_LIBRARY_PATH` (Linux)
+2. Đặt cài đặt phân bổ bộ nhớ CUDA tối ưu
 
 </details>
 
-## Contributions and Support 
+## 🤝 Đóng Góp và Hỗ Trợ
 
-If you found this project useful please give it a star and consider contributing to it or open an issue if you have an idea that can make it more useful.
+Nếu bạn thấy dự án này hữu ích, vui lòng cho nó một star và cân nhắc đóng góp vào nó hoặc mở một issue nếu bạn có ý tưởng có thể làm cho nó hữu ích hơn.
 
-## Original Project Credits
+## 📜 Tín Dụng Dự Án Gốc
 
-This fork maintains full compatibility with the original MoneyPrinterTurbo while adding new features. Check out the [original repository](https://github.com/harry0703/MoneyPrinterTurbo) for the base project documentation and additional features.
+Fork này duy trì khả năng tương thích hoàn toàn với MoneyPrinterTurbo gốc trong khi thêm các tính năng mới. Kiểm tra [repository gốc](https://github.com/harry0703/MoneyPrinterTurbo) cho tài liệu dự án cơ bản và các tính năng bổ sung.
+
+## 📄 Giấy Phép
+
+Dự án này kế thừa giấy phép từ dự án gốc MoneyPrinterTurbo.
+
+---
+
+**Được phát triển với ❤️ bởi Q-Tech Company**
+
+Repository: https://github.com/Cong-ty-TNNH-Q-Tech/CreateVideo
