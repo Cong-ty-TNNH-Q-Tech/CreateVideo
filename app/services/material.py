@@ -1,5 +1,7 @@
 import os
 import random
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 from urllib.parse import urlencode
 
@@ -311,6 +313,33 @@ def download_videos(
         percentage = (count / len(valid_video_items)) * 100 if valid_video_items else 0
         logger.info(f"   📹 '{term}': {count} videos ({percentage:.1f}%)")
 
+    # Helper function for parallel downloads
+    def download_single_video(item):
+        """Download a single video (for parallel execution)"""
+        try:
+            item_search_term = getattr(item, 'search_term', 'unknown')
+            logger.info(f"📥 Downloading: {item.url[:60]}...")
+            
+            saved_video_path = save_video(
+                video_url=item.url,
+                save_dir=material_directory,
+                search_term=item_search_term,
+                thumbnail_url=item.thumbnail_url,
+                preview_images=item.preview_images
+            )
+            
+            if saved_video_path:
+                return {
+                    'path': saved_video_path,
+                    'url': item.url,
+                    'duration': min(max_clip_duration, item.duration),
+                    'search_term': item_search_term
+                }
+        except Exception as e:
+            logger.error(f"❌ Failed to download {item.url[:60]}: {str(e)}")
+        return None
+    
+    # Setup directory
     video_paths = []
     material_directory = config.app.get("material_directory", "").strip()
     if material_directory == "task":
@@ -319,34 +348,78 @@ def download_videos(
         material_directory = ""
 
     total_duration = 0.0
-    downloaded_urls = set()  # Track downloaded URLs to prevent runtime duplicates
+    downloaded_urls = set()
     
-    for item in valid_video_items:
-        try:
-            # Double-check for URL duplicates at download time
-            if item.url in downloaded_urls:
-                logger.warning(f"skipping duplicate URL: {item.url}")
-                continue
+    # Get max workers from config or use default
+    max_workers = config.app.get("max_download_workers", 5)
+    logger.info(f"🚀 Starting parallel downloads with {max_workers} workers")
+    logger.info(f"📊 Target: {audio_duration:.1f}s from {len(valid_video_items)} videos")
+    
+    start_time = time.time()
+    successful = 0
+    failed = 0
+    
+    # Parallel download with ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all download tasks
+        future_to_item = {
+            executor.submit(download_single_video, item): item
+            for item in valid_video_items
+        }
+        
+        # Process completed downloads as they finish
+        for future in as_completed(future_to_item):
+            # Check if we already have enough duration
+            if total_duration >= audio_duration:
+                logger.info(f"✓ Target duration reached, stopping downloads...")
+                # Cancel remaining futures
+                for f in future_to_item:
+                    if not f.done():
+                        f.cancel()
+                break
+            
+            try:
+                result = future.result(timeout=120)  # 2 min timeout per download
                 
-            logger.info(f"downloading video: {item.url}")
-            # Use the search term associated with this specific video item
-            item_search_term = getattr(item, 'search_term', 'unknown')
-            saved_video_path = save_video(
-                video_url=item.url, save_dir=material_directory, search_term=item_search_term, thumbnail_url=item.thumbnail_url, preview_images=item.preview_images
-            )
-            if saved_video_path:
-                logger.info(f"video saved: {saved_video_path} (search_term: '{item_search_term}')")
-                video_paths.append(saved_video_path)
-                downloaded_urls.add(item.url)
-                seconds = min(max_clip_duration, item.duration)
-                total_duration += seconds
-                if total_duration > audio_duration:
+                if result and result['url'] not in downloaded_urls:
+                    video_paths.append(result['path'])
+                    downloaded_urls.add(result['url'])
+                    total_duration += result['duration']
+                    successful += 1
+                    
+                    progress = (total_duration / audio_duration) * 100 if audio_duration > 0 else 0
                     logger.info(
-                        f"total duration of downloaded videos: {total_duration} seconds, skip downloading more"
+                        f"✅ Progress: {total_duration:.1f}/{audio_duration:.1f}s "
+                        f"({progress:.0f}%) | {len(video_paths)} videos"
                     )
-                    break
-        except Exception as e:
-            logger.error(f"failed to download video: {utils.to_json(item)} => {str(e)}")
+                else:
+                    failed += 1
+                    
+            except Exception as e:
+                failed += 1
+                logger.error(f"❌ Download exception: {str(e)}")
+    
+    elapsed_time = time.time() - start_time
+    
+    # Summary statistics
+    logger.success(f"\n{'='*60}")
+    logger.success(f"📊 DOWNLOAD SUMMARY")
+    logger.success(f"{'='*60}")
+    logger.success(f"✅ Successful:       {successful} videos")
+    logger.success(f"❌ Failed:           {failed} videos")
+    logger.success(f"⏱️  Total time:       {elapsed_time:.1f}s")
+    logger.success(f"📹 Total duration:   {total_duration:.1f}s (target: {audio_duration:.1f}s)")
+    
+    if successful > 0:
+        avg_time = elapsed_time / successful
+        logger.success(f"⚡ Avg per video:    {avg_time:.1f}s")
+        
+        # Calculate theoretical speedup vs sequential
+        sequential_time = successful * avg_time
+        speedup = sequential_time / elapsed_time if elapsed_time > 0 else 1
+        logger.success(f"🚀 Speedup:          {speedup:.1f}× faster than sequential")
+    
+    logger.success(f"{'='*60}\n")
     
     # Final diversity report
     logger.success(f"downloaded {len(video_paths)} videos")
