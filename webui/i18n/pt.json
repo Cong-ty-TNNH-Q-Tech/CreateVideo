@@ -100,6 +100,9 @@
     "Hide Log": "Ocultar Log",
     "Hide Basic Settings": "Ocultar Configurações Básicas\n\nOculto, o painel de configurações básicas não será exibido na página.\n\nSe precisar exibi-lo novamente, defina `hide_config = false` em `config.toml`",
     "LLM Settings": "**Configurações do LLM**",
-    "Video Source Settings": "**Configurações da Fonte do Vídeo**"
+    "Video Source Settings": "**Configurações da Fonte do Vídeo**",
+    "Generated Videos": "Vídeos Gerados",
+    "Download": "Baixar",
+    "Download button unavailable": "Botão de download indisponível"
   }
 }

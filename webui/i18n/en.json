@@ -129,6 +129,9 @@
     "Minimum image similarity score required for video-text matching": "Minimum image similarity score required for video-text matching",
     "Image Similarity Model": "Image Similarity Model",
     "CLIP model for text-image similarity comparison": "CLIP model for text-image similarity comparison",
-    "Image similarity analyzes video thumbnails and preview frames to find videos that visually match the script content.": "Image similarity analyzes video thumbnails and preview frames to find videos that visually match the script content."
+    "Image similarity analyzes video thumbnails and preview frames to find videos that visually match the script content.": "Image similarity analyzes video thumbnails and preview frames to find videos that visually match the script content.",
+    "Generated Videos": "Generated Videos",
+    "Download": "Download",
+    "Download button unavailable": "Download button unavailable"
   }
 }

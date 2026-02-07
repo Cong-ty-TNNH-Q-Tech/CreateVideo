@@ -125,6 +125,9 @@
     "Minimum image similarity score required for video-text matching": "视频文本匹配所需的最小图像相似度分数",
     "Image Similarity Model": "图像相似度模型",
     "CLIP model for text-image similarity comparison": "用于文本图像相似度比较的CLIP模型",
-    "Image similarity analyzes video thumbnails and preview frames to find videos that visually match the script content.": "图像相似度分析视频缩略图和预览帧，找到与脚本内容视觉匹配的视频。"
+    "Image similarity analyzes video thumbnails and preview frames to find videos that visually match the script content.": "图像相似度分析视频缩略图和预览帧，找到与脚本内容视觉匹配的视频。",
+    "Generated Videos": "已生成的视频",
+    "Download": "下载",
+    "Download button unavailable": "下载按钮不可用"
   }
 }

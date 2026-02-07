@@ -1271,10 +1271,40 @@ if start_button:
     st.success(tr("Video Generation Completed"))
     try:
         if video_files:
-            player_cols = st.columns(len(video_files) * 2 + 1)
+            st.write("---")
+            st.write(f"**{tr('Generated Videos')} ({len(video_files)})**")
+            
             for i, url in enumerate(video_files):
-                player_cols[i * 2 + 1].video(url)
-    except Exception:
+                video_col, download_col = st.columns([4, 1])
+                
+                with video_col:
+                    st.video(url)
+                
+                with download_col:
+                    # Extract filename from path
+                    video_filename = os.path.basename(url)
+                    
+                    # Read video file
+                    try:
+                        with open(url, "rb") as video_file:
+                            video_bytes = video_file.read()
+                        
+                        st.download_button(
+                            label=f"📥 {tr('Download')} Video {i+1}",
+                            data=video_bytes,
+                            file_name=video_filename,
+                            mime="video/mp4",
+                            use_container_width=True,
+                            key=f"download_video_{i}_{task_id}"
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to create download button: {e}")
+                        st.error(tr("Download button unavailable"))
+                
+                if i < len(video_files) - 1:
+                    st.write("")  # Add spacing between videos
+    except Exception as e:
+        logger.error(f"Failed to display videos: {e}")
         pass
 
     open_task_folder(task_id)

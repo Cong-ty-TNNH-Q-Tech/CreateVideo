@@ -100,6 +100,9 @@
     "Hide Log": "Ẩn Nhật Ký",
     "Hide Basic Settings": "Ẩn Cài Đặt Cơ Bản\n\nẨn, thanh cài đặt cơ bản sẽ không hiển thị trên trang web.\n\nNếu bạn muốn hiển thị lại, vui lòng đặt `hide_config = false` trong `config.toml`",
     "LLM Settings": "**Cài Đặt LLM**",
-    "Video Source Settings": "**Cài Đặt Nguồn Video**"
+    "Video Source Settings": "**Cài Đặt Nguồn Video**",
+    "Generated Videos": "Video Đã Tạo",
+    "Download": "Tải Xuống",
+    "Download button unavailable": "Nút tải xuống không khả dụng"
   }
 }
