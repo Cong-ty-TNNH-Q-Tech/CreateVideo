@@ -43,8 +43,8 @@ _caching_enabled = True  # Can be disabled for testing or if memory is limited
 # Rate limiting to prevent memory issues
 _last_inference_time = 0
 _inference_count = 0
-INFERENCE_DELAY = 0.15  # Slightly increased delay for stability
-MAX_BATCH_SIZE = 10    # Process in smaller batches
+INFERENCE_DELAY = 0.05  # Reduced delay for better throughput (was 0.15)
+MAX_BATCH_SIZE = 50    # Larger batches for better throughput (was 10)
 
 def check_image_similarity_dependencies() -> bool:
     """Check if image similarity dependencies are available"""
@@ -98,7 +98,7 @@ def timeout_wrapper(timeout_seconds=30):
     return decorator
 
 def load_clip_model(model_name: str = "clip-vit-base-patch32"):
-    """Load CLIP model for text-image similarity"""
+    """Load CLIP model for text-image similarity via ModelManager (cached singleton)"""
     global _clip_model, _clip_processor, _model_load_fails
     
     # Check if we've had too many failures
@@ -110,66 +110,13 @@ def load_clip_model(model_name: str = "clip-vit-base-patch32"):
         return _clip_model, _clip_processor
     
     try:
-        import torch
-        from transformers import CLIPProcessor, CLIPModel
+        from app.services.model_manager import ModelManager
         
-        # Map model names to HuggingFace model IDs
-        model_mapping = {
-            "clip-vit-base-patch32": "openai/clip-vit-base-patch32",
-            "clip-vit-base-patch16": "openai/clip-vit-base-patch16", 
-            "clip-vit-large-patch14": "openai/clip-vit-large-patch14"
-        }
+        safe_log("info", f"🖼️  Loading CLIP model via ModelManager: {model_name}")
         
-        hf_model_name = model_mapping.get(model_name, model_name)
+        _clip_model, _clip_processor = ModelManager.get_instance().get_clip_model(model_name)
         
-        safe_log("info", f"🖼️  Loading CLIP model: {model_name}")
-        
-        # Set up cache directory for persistent storage
-        cache_dir = os.path.expanduser("~/.cache/huggingface/transformers")
-        os.makedirs(cache_dir, exist_ok=True)
-        
-        # Load processor with slow tokenizer for compatibility
-        try:
-            _clip_processor = CLIPProcessor.from_pretrained(
-                hf_model_name,
-                cache_dir=cache_dir,
-                use_fast=False  # Use slow processor to avoid CLIPImageProcessorFast attribute errors
-            )
-        except Exception as processor_error:
-            safe_log("warning", f"⚠️  Could not load processor with cache ({processor_error}), trying without cache")
-            _clip_processor = CLIPProcessor.from_pretrained(
-                hf_model_name,
-                use_fast=False
-            )
-        
-        # Try to load with safetensors first, fallback to regular loading
-        try:
-            _clip_model = CLIPModel.from_pretrained(
-                hf_model_name,
-                cache_dir=cache_dir,
-                use_safetensors=True
-            )
-            safe_log("info", "✅ Loaded model using safetensors format")
-        except Exception as safetensor_error:
-            safe_log("warning", f"⚠️  Could not load with safetensors ({safetensor_error}), falling back to regular loading")
-            _clip_model = CLIPModel.from_pretrained(
-                hf_model_name,
-                cache_dir=cache_dir
-            )
-            safe_log("info", "✅ Loaded model using regular format")
-        
-        # Keep model on CPU to avoid memory issues
-        _clip_model = _clip_model.to("cpu")
-        
-        # Force CPU-only mode if enabled
-        if _force_cpu_only:
-            safe_log("info", "🖥️  Forcing CPU-only mode for CLIP model")
-            _clip_model = _clip_model.to("cpu")
-            # Ensure no CUDA operations
-            if hasattr(torch.backends, 'cudnn'):
-                torch.backends.cudnn.enabled = False
-        
-        safe_log("success", f"✅ CLIP model loaded successfully: {model_name} (device: {'CPU-only' if _force_cpu_only else 'auto'})")
+        safe_log("success", f"✅ CLIP model loaded successfully: {model_name}")
         
         # Reset failure count on successful load
         _model_load_fails = 0

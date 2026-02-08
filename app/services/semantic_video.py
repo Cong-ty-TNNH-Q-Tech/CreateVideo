@@ -15,6 +15,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 # Import config to check verbose flag
 from app.config import config
+from app.services.model_manager import ModelManager
 
 # Global model instance
 _model = None
@@ -30,7 +31,7 @@ except ImportError:
     logger.warning("Image similarity service not available - install transformers, torch, and pillow for image similarity features")
 
 def load_model(model_name: str = "all-mpnet-base-v2"):
-    """Load the semantic search model"""
+    """Load the semantic search model via ModelManager (cached singleton)"""
     global _model, _model_name, _model_load_fails
     
     # Check if we've had too many failures
@@ -40,18 +41,16 @@ def load_model(model_name: str = "all-mpnet-base-v2"):
     
     if _model is None or _model_name != model_name:
         try:
-            logger.info(f"🤖 Loading semantic search model: {model_name}")
-            logger.info("📦 This may take a moment on first run (downloading model)...")
+            logger.info(f"🤖 Loading semantic search model via ModelManager: {model_name}")
             
-            # Force CPU usage to avoid GPU hanging issues
-            logger.info("🖥️  Forcing CPU-only mode for SentenceTransformer to avoid GPU issues")
-            _model = SentenceTransformer(model_name, device='cpu')
+            # Use ModelManager for cached model loading
+            _model = ModelManager.get_instance().get_sentence_transformer(model_name)
             _model_name = model_name
             
             # Reset failure count on successful load
             _model_load_fails = 0
             
-            logger.success(f"✅ Semantic search model loaded successfully: {model_name} (CPU-only)")
+            logger.success(f"✅ Semantic search model loaded: {model_name}")
             logger.info(f"🔧 Model max sequence length: {_model.max_seq_length}")
             
         except Exception as e:
