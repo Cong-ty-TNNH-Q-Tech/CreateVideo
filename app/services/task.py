@@ -2,6 +2,7 @@ import math
 import os.path
 import re
 from os import path
+from concurrent.futures import ThreadPoolExecutor
 
 from loguru import logger
 
@@ -254,7 +255,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
     if type(params.video_concat_mode) is str:
         params.video_concat_mode = VideoConcatMode(params.video_concat_mode)
 
-    # 1. Generate script
+    # ===== Step 1: Generate script =====
     video_script = generate_script(task_id, params)
     if not video_script or "Error: " in video_script:
         sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
@@ -268,32 +269,47 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         )
         return {"script": video_script}
 
-    # 2. Generate terms
-    video_terms = ""
-    if params.video_source != "local":
-        video_terms = generate_terms(task_id, params, video_script)
-        if not video_terms:
-            sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
-            return
-
-    save_script_data(task_id, video_script, video_terms, params)
-
+    # ===== Step 2: Early exit for "terms" only =====
     if stop_at == "terms":
+        video_terms = ""
+        if params.video_source != "local":
+            video_terms = generate_terms(task_id, params, video_script)
+            if not video_terms:
+                sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                return
+        save_script_data(task_id, video_script, video_terms, params)
         sm.state.update_task(
             task_id, state=const.TASK_STATE_COMPLETE, progress=100, terms=video_terms
         )
         return {"script": video_script, "terms": video_terms}
 
-    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=20)
+    # ===== Step 2+3: Generate terms + audio in PARALLEL =====
+    logger.info("\n\n## ⚡ running terms + audio generation in parallel")
+    video_terms = ""
+    audio_file = None
+    audio_duration = None
+    sub_maker = None
 
-    # 3. Generate audio
-    audio_file, audio_duration, sub_maker = generate_audio(
-        task_id, params, video_script
-    )
-    if not audio_file:
-        sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
-        return
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        terms_future = None
+        if params.video_source != "local":
+            terms_future = executor.submit(generate_terms, task_id, params, video_script)
+        audio_future = executor.submit(generate_audio, task_id, params, video_script)
 
+        # Collect results
+        if terms_future:
+            video_terms = terms_future.result()
+            if not video_terms:
+                sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                return
+
+        audio_result = audio_future.result()
+        audio_file, audio_duration, sub_maker = audio_result
+        if not audio_file:
+            sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+            return
+
+    save_script_data(task_id, video_script, video_terms, params)
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=30)
 
     if stop_at == "audio":
@@ -305,12 +321,11 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         )
         return {"audio_file": audio_file, "audio_duration": audio_duration}
 
-    # 4. Generate subtitle
-    subtitle_path = generate_subtitle(
-        task_id, params, video_script, sub_maker, audio_file
-    )
-
+    # ===== Step 4: Early exit for "subtitle" only =====
     if stop_at == "subtitle":
+        subtitle_path = generate_subtitle(
+            task_id, params, video_script, sub_maker, audio_file
+        )
         sm.state.update_task(
             task_id,
             state=const.TASK_STATE_COMPLETE,
@@ -319,12 +334,20 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         )
         return {"subtitle_path": subtitle_path}
 
-    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=40)
+    # ===== Step 4+5: Subtitle + video download in PARALLEL =====
+    logger.info("\n\n## ⚡ running subtitle + video download in parallel")
 
-    # 5. Get video materials
-    downloaded_videos = get_video_materials(
-        task_id, params, video_terms, audio_duration
-    )
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        subtitle_future = executor.submit(
+            generate_subtitle, task_id, params, video_script, sub_maker, audio_file
+        )
+        download_future = executor.submit(
+            get_video_materials, task_id, params, video_terms, audio_duration
+        )
+
+        subtitle_path = subtitle_future.result()
+        downloaded_videos = download_future.result()
+
     if not downloaded_videos:
         sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
         return
@@ -340,7 +363,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
 
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=50)
 
-    # 6. Generate final videos
+    # ===== Step 6: Generate final videos =====
     final_video_paths, combined_video_paths = generate_final_videos(
         task_id, params, downloaded_videos, audio_file, subtitle_path, video_script
     )
