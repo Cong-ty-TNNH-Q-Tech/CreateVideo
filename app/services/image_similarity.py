@@ -32,7 +32,7 @@ _clip_model = None
 _clip_processor = None
 _model_load_fails = 0  # Track model loading failures
 _max_load_retries = 3  # Maximum retries before giving up
-_force_cpu_only = True  # Force CPU-only mode to avoid GPU issues
+_force_cpu_only = False  # Auto-detect GPU via ModelManager (GPU priority, CPU fallback)
 
 # Add embedding cache to avoid reprocessing same images/text
 _image_embedding_cache = {}

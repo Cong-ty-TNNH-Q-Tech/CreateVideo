@@ -17,6 +17,39 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from loguru import logger
 
 
+def _detect_device(preferred: str = "auto") -> str:
+    """
+    Detect the best available device.
+    Priority: CUDA GPU > CPU.
+    
+    Args:
+        preferred: 'auto' (detect), 'cuda', or 'cpu'
+    Returns:
+        'cuda' or 'cpu'
+    """
+    if preferred == "cpu":
+        return "cpu"
+    
+    try:
+        import torch
+        if torch.cuda.is_available():
+            device_name = torch.cuda.get_device_name(0)
+            vram_mb = torch.cuda.get_device_properties(0).total_mem / 1024 / 1024
+            logger.info(
+                f"🎮 GPU detected: {device_name} ({vram_mb:.0f} MB VRAM)"
+            )
+            return "cuda"
+        else:
+            logger.info("🖥️  No CUDA GPU detected, using CPU")
+            return "cpu"
+    except ImportError:
+        logger.info("🖥️  PyTorch not available, using CPU")
+        return "cpu"
+    except Exception as e:
+        logger.warning(f"⚠️  GPU detection failed ({e}), falling back to CPU")
+        return "cpu"
+
+
 class ModelManager:
     """
     Singleton class to manage all AI models with lazy loading and caching.
@@ -40,6 +73,9 @@ class ModelManager:
         self._clip_processor = None
         self._clip_model_name = None
 
+        # Device detection (GPU priority, CPU fallback)
+        self._device = _detect_device("auto")
+
         # Status tracking
         self._models_preloaded = False
         self._loading_errors: Dict[str, str] = {}
@@ -48,7 +84,7 @@ class ModelManager:
         # Config cache
         self._config = None
 
-        logger.info("🔧 ModelManager initialized")
+        logger.info(f"🔧 ModelManager initialized (device={self._device})")
 
     @classmethod
     def get_instance(cls) -> "ModelManager":
@@ -93,8 +129,12 @@ class ModelManager:
 
             config = self._get_config()
             model_size = config.whisper.get("model_size", "large-v3")
-            device = config.whisper.get("device", "cpu")
-            compute_type = config.whisper.get("compute_type", "int8")
+            # Use config device if explicitly set, otherwise auto-detect
+            cfg_device = config.whisper.get("device", "auto")
+            device = cfg_device if cfg_device != "auto" else self._device
+            # Use float16 on GPU for speed, int8 on CPU for memory
+            default_compute = "float16" if device == "cuda" else "int8"
+            compute_type = config.whisper.get("compute_type", default_compute)
 
             # Check for local model first
             model_path = f"{utils.root_dir()}/models/whisper-{model_size}"
@@ -152,8 +192,8 @@ class ModelManager:
         try:
             from sentence_transformers import SentenceTransformer
 
-            # Use CPU - no GPU available on this system
-            device = "cpu"
+            # Prefer GPU, fallback to CPU
+            device = self._device
 
             logger.info(
                 f"🤖 [ModelManager] Loading SentenceTransformer: {model_name} "
@@ -161,7 +201,17 @@ class ModelManager:
             )
             start_time = time.time()
 
-            self._sentence_transformer = SentenceTransformer(model_name, device=device)
+            try:
+                self._sentence_transformer = SentenceTransformer(model_name, device=device)
+            except Exception as gpu_err:
+                if device == "cuda":
+                    logger.warning(
+                        f"⚠️  GPU loading failed ({gpu_err}), falling back to CPU"
+                    )
+                    device = "cpu"
+                    self._sentence_transformer = SentenceTransformer(model_name, device=device)
+                else:
+                    raise
             self._sentence_transformer_name = model_name
 
             load_time = time.time() - start_time
@@ -216,7 +266,10 @@ class ModelManager:
             cache_dir = os.path.expanduser("~/.cache/huggingface/transformers")
             os.makedirs(cache_dir, exist_ok=True)
 
-            logger.info(f"🤖 [ModelManager] Loading CLIP: {model_name}")
+            # Prefer GPU, fallback to CPU
+            device = self._device
+
+            logger.info(f"🤖 [ModelManager] Loading CLIP: {model_name} (device={device})")
             start_time = time.time()
 
             # Load processor (slow tokenizer for compatibility)
@@ -239,15 +292,26 @@ class ModelManager:
                     cache_dir=cache_dir,
                 )
 
-            # CPU only
-            self._clip_model = self._clip_model.to("cpu")
+            # Move to detected device (GPU if available, else CPU)
+            try:
+                self._clip_model = self._clip_model.to(device)
+            except Exception as gpu_err:
+                if device == "cuda":
+                    logger.warning(
+                        f"⚠️  CLIP GPU move failed ({gpu_err}), falling back to CPU"
+                    )
+                    self._clip_model = self._clip_model.to("cpu")
+                    device = "cpu"
+                else:
+                    raise
+
             self._clip_model.eval()
             self._clip_model_name = model_name
 
             load_time = time.time() - start_time
             self._load_times["clip"] = load_time
             self._loading_errors.pop("clip", None)
-            logger.success(f"✅ [ModelManager] CLIP loaded in {load_time:.1f}s")
+            logger.success(f"✅ [ModelManager] CLIP loaded in {load_time:.1f}s (device={device})")
 
         except Exception as e:
             error_msg = f"Failed to load CLIP model: {e}"
@@ -359,6 +423,7 @@ class ModelManager:
     def get_status(self) -> Dict[str, Any]:
         """Get status of all managed models."""
         return {
+            "device": self._device,
             "models_preloaded": self._models_preloaded,
             "whisper_loaded": self._whisper_model is not None,
             "sentence_transformer_loaded": self._sentence_transformer is not None,
