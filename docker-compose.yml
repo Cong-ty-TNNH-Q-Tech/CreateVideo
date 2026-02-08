@@ -1,6 +1,8 @@
 x-common-volumes: &common-volumes
   - ./:/MoneyPrinterTurbo
 
+# GPU support: use with `docker compose --profile gpu up`
+# CPU only (default): `docker compose up`
 services:
   webui:
     build:
@@ -22,3 +24,48 @@ services:
     command: [ "python3", "main.py" ]
     volumes: *common-volumes
     restart: always
+
+  # ---- GPU-enabled services (use: docker compose --profile gpu up) ----
+  webui-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: "moneyprinterturbo-webui-gpu"
+    profiles: ["gpu"]
+    ports:
+      - "8501:8501"
+    command: [ "streamlit", "run", "./webui/Main.py","--browser.serverAddress=127.0.0.1","--server.enableCORS=True","--browser.gatherUsageStats=False" ]
+    volumes: *common-volumes
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+
+  api-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: "moneyprinterturbo-api-gpu"
+    profiles: ["gpu"]
+    ports:
+      - "8080:8080"
+    command: [ "python3", "main.py" ]
+    volumes: *common-volumes
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility

@@ -7,6 +7,7 @@ import random
 import gc
 import shutil
 import json
+import subprocess
 from typing import List
 from loguru import logger
 import numpy as np
@@ -38,24 +39,55 @@ from app.services import semantic_video
 
 # High-quality video encoding settings
 audio_codec = "aac"
-video_codec = "libx264"
 fps = 30
 
 # High-quality encoding parameters
 video_bitrate = "8000k"  # High bitrate for excellent quality
 audio_bitrate = "320k"   # High audio bitrate
-crf = 18                 # Constant Rate Factor - lower = higher quality (18-23 is excellent range)
-preset = "medium"        # Balance between encoding speed and compression efficiency
 
-# FFmpeg parameters for maximum quality
-quality_params = [
-    "-crf", str(crf),
-    "-preset", preset,
-    "-profile:v", "high",
-    "-level", "4.1",
-    "-pix_fmt", "yuv420p",
-    "-movflags", "+faststart"
-]
+
+def _detect_hw_encoder() -> tuple:
+    """
+    Detect best available video encoder.
+    Priority: NVIDIA NVENC (h264_nvenc) > Software (libx264).
+    Returns (codec, quality_params) tuple.
+    """
+    # Try NVIDIA hardware encoder
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-encoders"],
+            capture_output=True, text=True, timeout=5
+        )
+        if "h264_nvenc" in result.stdout:
+            logger.info("🎮 NVIDIA NVENC hardware encoder detected — using h264_nvenc")
+            params = [
+                "-preset", "p4",           # NVENC preset: p1(fastest)..p7(best quality), p4=balanced
+                "-rc", "vbr",              # Variable bitrate
+                "-cq", "20",               # Constant quality factor (lower=better, 18-23 good range)
+                "-profile:v", "high",
+                "-level", "4.1",
+                "-pix_fmt", "yuv420p",
+                "-movflags", "+faststart",
+            ]
+            return "h264_nvenc", params
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+        logger.debug(f"ffmpeg encoder check failed: {e}")
+
+    # Fallback: software encoder
+    logger.info("🖥️  Using software encoder: libx264")
+    params = [
+        "-crf", "18",
+        "-preset", "medium",
+        "-profile:v", "high",
+        "-level", "4.1",
+        "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart",
+    ]
+    return "libx264", params
+
+
+# Auto-detect at module load
+video_codec, quality_params = _detect_hw_encoder()
 
 class SubClippedVideoClip:
     def __init__(self, file_path, start_time=None, end_time=None, width=None, height=None, duration=None):
