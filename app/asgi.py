@@ -80,3 +80,7 @@ def shutdown_event():
 @app.on_event("startup")
 def startup_event():
     logger.info("startup event")
+    
+    # Pre-load AI models in background for faster task processing
+    from app.services.model_manager import setup_model_preloading
+    setup_model_preloading(models=["sentence_transformer", "clip"])

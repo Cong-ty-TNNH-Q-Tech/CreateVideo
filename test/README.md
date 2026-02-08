@@ -8,8 +8,11 @@ This directory contains unit tests for the **MoneyPrinterTurbo** project.
   - `test_video.py`: Tests for the video service  
   - `test_task.py`: Tests for the task service  
   - `test_voice.py`: Tests for the voice service  
+- `test_parallel_downloads.py`: Test for parallel video download optimization
 
 ## Running Tests
+
+### Standard Unit Tests
 
 You can run the tests using Python’s built-in `unittest` framework:
 
@@ -26,6 +29,43 @@ python -m unittest test.services.test_video.TestVideoService
 # Run a specific test method
 python -m unittest test.services.test_video.TestVideoService.test_preprocess_video
 ````
+
+### 🚀 Performance Optimization Tests
+
+#### Test Parallel Downloads
+
+Test the parallel video download optimization (60-80% faster):
+
+```bash
+# Full test (downloads actual videos)
+python test/test_parallel_downloads.py
+
+# Quick test (config check only, no downloads)
+python test/test_parallel_downloads.py --skip-download
+
+# Test with specific video source
+python test/test_parallel_downloads.py --source pexels
+
+# Test with custom duration
+python test/test_parallel_downloads.py --duration 60
+```
+
+**What to expect:**
+- 🚀 Speedup metric: Look for "🚀 Speedup: X.X× faster than sequential"
+- ✅ Good result: Speedup > 3× (e.g., 4-5× is typical with 5 workers)
+- ⚠️ Poor result: Speedup < 2× (may need to increase `max_download_workers`)
+
+**Configuration:**
+```toml
+# In config.toml
+[app]
+max_download_workers = 5  # 3-10 recommended
+```
+
+**Troubleshooting:**
+- If speedup is low: Increase `max_download_workers` (try 8-10)
+- If errors occur: Decrease `max_download_workers` (try 3)
+- Check network speed and API rate limits
 
 ## Adding New Tests
 

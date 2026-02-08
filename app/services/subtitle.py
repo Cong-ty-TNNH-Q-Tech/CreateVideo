@@ -8,6 +8,7 @@ from loguru import logger
 
 from app.config import config
 from app.utils import utils
+from app.services.model_manager import ModelManager
 
 model_size = config.whisper.get("model_size", "large-v3")
 device = config.whisper.get("device", "cpu")
@@ -18,18 +19,9 @@ model = None
 def create(audio_file, subtitle_file: str = ""):
     global model
     if not model:
-        model_path = f"{utils.root_dir()}/models/whisper-{model_size}"
-        model_bin_file = f"{model_path}/model.bin"
-        if not os.path.isdir(model_path) or not os.path.isfile(model_bin_file):
-            model_path = model_size
-
-        logger.info(
-            f"loading model: {model_path}, device: {device}, compute_type: {compute_type}"
-        )
+        # Use ModelManager for cached model loading
         try:
-            model = WhisperModel(
-                model_size_or_path=model_path, device=device, compute_type=compute_type
-            )
+            model = ModelManager.get_instance().get_whisper()
         except Exception as e:
             logger.error(
                 f"failed to load model: {e} \n\n"

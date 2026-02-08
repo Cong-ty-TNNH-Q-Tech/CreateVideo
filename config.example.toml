@@ -18,6 +18,12 @@ pexels_api_keys = []
 # 特别注意格式，Key 用英文双引号括起来，多个Key用逗号隔开
 pixabay_api_keys = []
 
+# Performance Optimization: Parallel Video Downloads
+# Number of concurrent video downloads (5-10 recommended)
+# Higher = faster downloads but more memory/network usage
+# Lower = slower but more stable
+max_download_workers = 5
+
 # 支持的提供商 (Supported providers):
 #   openai
 #   moonshot    (月之暗面)
