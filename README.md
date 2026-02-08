@@ -78,7 +78,28 @@ Xem các tính năng nâng cao trong thực tế:
 <img src="docs/ui_config_2.png" alt="Cài Đặt Giọng Nói" width="800"/>
 </div>
 
-## 📝 Prompt Hệ Thống
+## � Tài Liệu Hướng Dẫn
+
+### Jupyter Notebook - Hướng Dẫn Cài Đặt Nhanh
+
+Chúng tôi cung cấp một Jupyter Notebook chi tiết để giúp bạn bắt đầu nhanh chóng:
+
+📓 **[docs/MoneyPrinterTurbo.ipynb](docs/MoneyPrinterTurbo.ipynb)**
+
+**Nội dung notebook:**
+- 🚀 Hướng dẫn cài đặt từng bước (bao gồm hỗ trợ CUDA)
+- ⚙️ Cấu hình API keys và các tham số
+- 🎯 Khởi chạy WebUI và API server
+- 💡 Tips về các tính năng tối ưu hiệu suất
+
+**Cách sử dụng:**
+1. Mở notebook trong Jupyter Lab/Notebook hoặc VS Code
+2. Làm theo các cell theo thứ tự
+3. Chạy các lệnh để cài đặt và khởi động hệ thống
+
+> 💡 **Tip**: Notebook đặc biệt hữu ích cho người dùng mới hoặc khi cần setup trên môi trường mới (Google Colab, remote server, etc.)
+
+## �📝 Prompt Hệ Thống
 
 Đây là prompt chính xác mà chúng tôi sử dụng để tạo nội dung YouTube hấp dẫn:
 

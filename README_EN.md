@@ -80,7 +80,26 @@ For complete tranparency and some reprodceability, please see below settings use
 <img src="docs/ui_config_2.png" alt="Voice Settings" width="800"/>
 </div>
 
+## 📚 Documentation Guide
 
+### Jupyter Notebook - Quick Setup Guide
+
+We provide a detailed Jupyter Notebook to help you get started quickly:
+
+📓 **[docs/MoneyPrinterTurbo.ipynb](docs/MoneyPrinterTurbo.ipynb)**
+
+**Notebook contents:**
+- 🚀 Step-by-step installation guide (including CUDA support)
+- ⚙️ API keys and parameter configuration
+- 🎯 Launching WebUI and API server
+- 💡 Tips on performance optimization features
+
+**How to use:**
+1. Open the notebook in Jupyter Lab/Notebook or VS Code
+2. Follow the cells in order
+3. Run the commands to install and launch the system
+
+> 💡 **Tip**: The notebook is especially useful for new users or when setting up on a new environment (Google Colab, remote server, etc.)
 
 ## Show Me The Prompt
 
