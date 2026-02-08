@@ -51,31 +51,9 @@ def _detect_hw_encoder() -> tuple:
     Detect best available video encoder.
     Priority: NVIDIA NVENC (h264_nvenc) > Software (libx264).
     Returns (codec, quality_params) tuple.
+    Validates encoder with a test encode to avoid runtime failures.
     """
-    # Try NVIDIA hardware encoder
-    try:
-        result = subprocess.run(
-            ["ffmpeg", "-hide_banner", "-encoders"],
-            capture_output=True, text=True, timeout=5
-        )
-        if "h264_nvenc" in result.stdout:
-            logger.info("🎮 NVIDIA NVENC hardware encoder detected — using h264_nvenc")
-            params = [
-                "-preset", "p4",           # NVENC preset: p1(fastest)..p7(best quality), p4=balanced
-                "-rc", "vbr",              # Variable bitrate
-                "-cq", "20",               # Constant quality factor (lower=better, 18-23 good range)
-                "-profile:v", "high",
-                "-level", "4.1",
-                "-pix_fmt", "yuv420p",
-                "-movflags", "+faststart",
-            ]
-            return "h264_nvenc", params
-    except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
-        logger.debug(f"ffmpeg encoder check failed: {e}")
-
-    # Fallback: software encoder
-    logger.info("🖥️  Using software encoder: libx264")
-    params = [
+    sw_params = [
         "-crf", "18",
         "-preset", "medium",
         "-profile:v", "high",
@@ -83,7 +61,58 @@ def _detect_hw_encoder() -> tuple:
         "-pix_fmt", "yuv420p",
         "-movflags", "+faststart",
     ]
-    return "libx264", params
+
+    # Try NVIDIA hardware encoder
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-encoders"],
+            capture_output=True, text=True, timeout=5
+        )
+        if "h264_nvenc" in result.stdout:
+            # NVENC param sets — try best first, fall back to minimal
+            nvenc_param_sets = [
+                # Full quality params (requires newer NVENC/ffmpeg)
+                ["-preset", "p4", "-rc", "vbr", "-cq", "20",
+                 "-profile:v", "high", "-level", "4.1",
+                 "-pix_fmt", "yuv420p", "-movflags", "+faststart"],
+                # Minimal NVENC params (widely compatible)
+                ["-preset", "medium", "-qp", "20",
+                 "-profile:v", "high",
+                 "-pix_fmt", "yuv420p", "-movflags", "+faststart"],
+                # Bare minimum — just use NVENC with defaults
+                ["-pix_fmt", "yuv420p", "-movflags", "+faststart"],
+            ]
+            for params in nvenc_param_sets:
+                if _test_encoder("h264_nvenc", params):
+                    logger.info(f"🎮 NVIDIA NVENC hardware encoder validated — using h264_nvenc")
+                    return "h264_nvenc", params
+            logger.warning("⚠️ NVENC listed but test encode failed — falling back to libx264")
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+        logger.debug(f"ffmpeg encoder check failed: {e}")
+
+    # Fallback: software encoder
+    logger.info("🖥️  Using software encoder: libx264")
+    return "libx264", sw_params
+
+
+def _test_encoder(codec: str, params: list) -> bool:
+    """Test that an encoder + params actually work by encoding a tiny frame."""
+    try:
+        cmd = [
+            "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+            "-f", "lavfi", "-i", "color=black:s=64x64:d=0.1:r=1",
+            "-c:v", codec,
+        ] + params + [
+            "-frames:v", "1",
+            "-f", "null", "-",
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            return True
+        logger.debug(f"Encoder test failed for {codec}: {result.stderr.strip()}")
+    except Exception as e:
+        logger.debug(f"Encoder test exception for {codec}: {e}")
+    return False
 
 
 # Auto-detect at module load
