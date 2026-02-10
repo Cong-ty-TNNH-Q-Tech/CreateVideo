@@ -256,17 +256,17 @@ def find_best_video_for_sentence(
                         
                     image_similarity_score = 0.0
             
-            # Combine text and image similarity scores
+            # Combine text and image similarity scores with optimized weighting
             if enable_image_similarity and IMAGE_SIMILARITY_AVAILABLE:
-                # Weight: 30% text similarity, 70% image similarity
-                combined_similarity = (0.3 * similarity) + (0.7 * image_similarity_score)
+                # Weight: 40% text similarity, 60% image similarity (more balanced)
+                combined_similarity = (0.4 * similarity) + (0.6 * image_similarity_score)
             else:
                 combined_similarity = similarity
             
-            # Enhanced diversity penalty system based on max_video_reuse
+            # Enhanced diversity penalty system with improved spacing
             usage_count = used_videos.get(video_path, 0)
             
-            # Special handling for max_video_reuse = 1
+            # Special handling for max_video_reuse = 1 (NO DUPLICATES mode)
             if max_video_reuse == 1:
                 # Check if there are any unused videos available
                 unused_videos_available = any(used_videos.get(v['video_path'], 0) == 0 for v in video_metadata)
@@ -274,26 +274,26 @@ def find_best_video_for_sentence(
                 if usage_count == 0:
                     diversity_penalty = 0.0  # No penalty for unused videos
                 elif usage_count >= 1 and unused_videos_available:
-                    diversity_penalty = 1.0  # High penalty if unused videos are still available
+                    diversity_penalty = 2.0  # Very high penalty to strongly prefer unused videos
                 else:
                     # All videos have been used once, allow reuse with moderate penalty
-                    diversity_penalty = 0.3  # Moderate penalty for reuse when necessary
+                    diversity_penalty = 0.4  # Allow necessary reuse but prefer less-used videos
             else:
-                # Original logic for max_video_reuse > 1
+                # Improved logic for max_video_reuse > 1 with better progression
                 if usage_count == 0:
                     diversity_penalty = 0.0  # No penalty for first use
-                elif usage_count == 1 and max_video_reuse >= 2:
-                    diversity_penalty = 0.2  # Light penalty for second use
-                elif usage_count == 2 and max_video_reuse >= 3:
-                    diversity_penalty = 0.4  # Moderate penalty for third use
-                elif usage_count == 3 and max_video_reuse >= 4:
-                    diversity_penalty = 0.6  # Heavy penalty for fourth use
+                elif usage_count == 1:
+                    diversity_penalty = 0.3  # Light penalty for second use
+                elif usage_count == 2:
+                    diversity_penalty = 0.6  # Moderate penalty for third use
+                elif usage_count == 3:
+                    diversity_penalty = 0.9  # Heavy penalty for fourth use
                 else:
-                    diversity_penalty = 1.0  # Eliminate from consideration
+                    diversity_penalty = 2.0  # Completely eliminate from consideration
                 
-                # Additional penalty if we've exceeded max_video_reuse
+                # Hard cutoff at max_video_reuse
                 if usage_count >= max_video_reuse:
-                    diversity_penalty = 1.0  # Completely eliminate from consideration
+                    diversity_penalty = 2.0  # Eliminate completely
             
             final_score = combined_similarity - diversity_penalty
             
@@ -412,6 +412,16 @@ def select_videos_for_script(
     logger.info("🎯 Starting semantic video selection for script")
     logger.info(f"📺 Available video pool: {len(video_metadata)} videos")
     logger.info(f"⏱️  Target audio duration: {audio_duration:.2f} seconds")
+    logger.info(f"🎬 Max clip duration: {max_clip_duration} seconds")
+    logger.info(f"📊 Estimated clips needed: {int(audio_duration / max_clip_duration)}")
+    
+    # Smart recommendations based on pool size
+    needed_clips = int(audio_duration / max_clip_duration)
+    if len(video_metadata) < needed_clips * 1.5:
+        logger.warning(f"⚠️  POOL SIZE WARNING: {len(video_metadata)} videos for ~{needed_clips} clips")
+        logger.warning(f"   💡 Recommendation: Increase search_pool_size to at least {int(needed_clips * 1.5)}")
+        if max_video_reuse == 1:
+            logger.warning(f"   💡 OR: Increase max_video_reuse to 2 to allow some duplicates")
     
     # Load the specified semantic model
     load_model(semantic_model)
@@ -421,6 +431,8 @@ def select_videos_for_script(
     logger.info(f"   🎯 Similarity threshold: {similarity_threshold}")
     logger.info(f"   🔄 Diversity threshold: {diversity_threshold}")
     logger.info(f"   🔁 Max video reuse: {max_video_reuse}")
+    if max_video_reuse == 1:
+        logger.info(f"   ✨ NO DUPLICATES MODE - Each video used only once")
     logger.info(f"   🤖 Semantic model: {semantic_model}")
     
     # Image similarity configuration
@@ -589,6 +601,63 @@ def select_videos_for_script(
             logger.warning("⚠️  Moderate diversity - consider increasing video pool")
         else:
             logger.warning("⚠️  Low diversity - recommend more diverse search terms or larger video pool")
+    
+    # Final validation and quality metrics
+    logger.info("\n" + "📈" + "=" * 50 + " VIDEO SELECTION SUMMARY " + "=" * 50)
+    logger.success(f"✅ Successfully selected {len(selected_videos)} video clips")
+    
+    # Calculate diversity metrics
+    unique_videos = set(v['video_path'] for v in selected_videos)
+    diversity_score = len(unique_videos) / len(selected_videos) * 100 if selected_videos else 0
+    
+    logger.info(f"🎯 Diversity Metrics:")
+    logger.info(f"   📺 Unique videos: {len(unique_videos)}/{len(selected_videos)}")
+    logger.info(f"   📊 Diversity score: {diversity_score:.1f}%")
+    
+    # Quality indicator
+    if diversity_score == 100:
+        logger.success(f"   ⭐ PERFECT - No duplicate videos!")
+    elif diversity_score >= 80:
+        logger.info(f"   ✅ EXCELLENT - Minimal duplicates")
+    elif diversity_score >= 60:
+        logger.warning(f"   ⚠️  GOOD - Some duplicates present")
+    else:
+        logger.warning(f"   ⚠️  FAIR - Many duplicates detected")
+        logger.warning(f"   💡 Tip: Increase search_pool_size or max_video_reuse")
+    
+    # Usage statistics
+    usage_counts = {}
+    for v in selected_videos:
+        path = v['video_path']
+        usage_counts[path] = usage_counts.get(path, 0) + 1
+    
+    max_usage = max(usage_counts.values()) if usage_counts else 0
+    logger.info(f"\n🔄 Video Reuse Statistics:")
+    for usage in range(1, max_usage + 1):
+        count = sum(1 for c in usage_counts.values() if c == usage)
+        if count > 0:
+            logger.info(f"   Used {usage}x: {count} videos")
+    
+    # Check if we met the max_video_reuse constraint
+    if max_usage > max_video_reuse:
+        logger.warning(f"   ⚠️  Warning: Some videos used {max_usage}x (limit was {max_video_reuse})")
+        logger.warning(f"   💡 This happened because pool was too small. Increase search_pool_size.")
+    
+    # Average similarity score
+    if selected_videos:
+        avg_similarity = sum(v.get('similarity_score', 0) for v in selected_videos) / len(selected_videos)
+        logger.info(f"\n🎯 Quality Metrics:")
+        logger.info(f"   Average similarity: {avg_similarity:.3f}")
+        if avg_similarity >= 0.7:
+            logger.success(f"   ⭐ EXCELLENT - Highly relevant videos")
+        elif avg_similarity >= 0.6:
+            logger.info(f"   ✅ GOOD - Relevant videos")
+        elif avg_similarity >= 0.5:
+            logger.warning(f"   ⚠️  OK - Moderately relevant")
+        else:
+            logger.warning(f"   ⚠️  POOR - Consider better search terms or lower threshold")
+    
+    logger.info("=" * 100 + "\n")
     
     return selected_videos
 

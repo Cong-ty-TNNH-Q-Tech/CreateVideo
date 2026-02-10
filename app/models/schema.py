@@ -113,17 +113,17 @@ class VideoParams(BaseModel):
     max_chars_per_line: Optional[int] = 40
     max_lines_per_subtitle: Optional[int] = 2
     
-    # Semantic video settings
+    # Semantic video settings - Optimized defaults for better quality
     segmentation_method: Optional[str] = "sentences"
-    min_segment_length: Optional[int] = 25
-    similarity_threshold: Optional[float] = 0.5
-    diversity_threshold: Optional[int] = 5
-    max_video_reuse: Optional[int] = 2  # Maximum times a video can be reused
-    search_pool_size: Optional[int] = 50
+    min_segment_length: Optional[int] = 35  # Increased from 25 for better context
+    similarity_threshold: Optional[float] = 0.65  # Increased from 0.5 for more relevant videos
+    diversity_threshold: Optional[int] = 8  # Increased from 5 to reduce duplicates
+    max_video_reuse: Optional[int] = 1  # Reduced from 2 to prevent duplicates
+    search_pool_size: Optional[int] = 100  # Increased from 50 for more video choices
     semantic_model: Optional[str] = "all-mpnet-base-v2"
     
     # Image similarity settings (only when semantic mode is enabled)
-    enable_image_similarity: Optional[bool] = False
+    enable_image_similarity: Optional[bool] = True  # Enable by default for better visual matching
     image_similarity_threshold: Optional[float] = 0.7
     image_similarity_model: Optional[str] = "clip-vit-base-patch32"
     

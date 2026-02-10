@@ -273,32 +273,28 @@ def download_videos(
     )
     logger.info(f"total unique video URLs: {len(global_video_urls)}")
 
-    # Create balanced selection from all search terms
+    # Create balanced selection from all search terms with improved algorithm
     valid_video_items = []
     valid_video_urls = set()
     
-    # Round-robin selection from each search term to ensure diversity
-    max_videos_per_term = max(1, int(audio_duration / max_clip_duration / len(videos_by_term)) + 1) if videos_by_term else 1
-    logger.info(f"targeting max {max_videos_per_term} videos per search term for balanced selection")
+    # Calculate optimal videos per term based on pool size and needs
+    videos_per_term_target = max(2, int(audio_duration / max_clip_duration / len(videos_by_term)) + 2) if videos_by_term else 2
+    logger.info(f"targeting ~{videos_per_term_target} videos per search term for optimal diversity")
     
     # Track selection statistics
     selection_stats = {}
     
-    for search_term, videos in videos_by_term.items():
-        # Shuffle videos within each search term
-        if video_contact_mode.value == VideoConcatMode.random.value:
-            random.shuffle(videos)
-        
-        # Take up to max_videos_per_term from this search term
-        count = 0
-        for item in videos:
-            if item.url not in valid_video_urls and count < max_videos_per_term:
-                valid_video_items.append(item)
-                valid_video_urls.add(item.url)
-                count += 1
-        
-        selection_stats[search_term] = count
-        logger.info(f"selected {count} videos from '{search_term}' ({count}/{len(videos)} available)")
+    # Round-robin selection with better balancing
+    for round_num in range(videos_per_term_target):
+        for search_term, videos in videos_by_term.items():
+            if round_num < len(videos):
+                item = videos[round_num]
+                if item.url not in valid_video_urls:
+                    valid_video_items.append(item)
+                    valid_video_urls.add(item.url)
+                    selection_stats[search_term] = selection_stats.get(search_term, 0) + 1
+    
+    logger.info(f"selected {len(valid_video_items)} videos using round-robin balanced selection")
     
     # Final shuffle of the balanced selection
     if video_contact_mode.value == VideoConcatMode.random.value:
@@ -306,12 +302,24 @@ def download_videos(
     
     logger.info(f"selected {len(valid_video_items)} videos for download with balanced representation")
     
-    # Log diversity metrics
+    # Log diversity metrics with enhanced reporting
     logger.info("🎯 Diversity metrics:")
-    logger.info(f"   📊 Search terms represented: {len(selection_stats)}/{len(search_terms)}")
-    for term, count in selection_stats.items():
+    logger.info(f"   📈 Search terms represented: {len(selection_stats)}/{len(search_terms)}")
+    logger.info(f"   📊 Total unique videos selected: {len(valid_video_items)}")
+    
+    for term in sorted(selection_stats.keys(), key=lambda x: selection_stats[x], reverse=True):
+        count = selection_stats[term]
         percentage = (count / len(valid_video_items)) * 100 if valid_video_items else 0
         logger.info(f"   📹 '{term}': {count} videos ({percentage:.1f}%)")
+    
+    # Quality check
+    if len(valid_video_items) < needed_clips:
+        logger.warning(f"   ⚠️  Only {len(valid_video_items)} videos for ~{needed_clips} clips")
+        logger.warning(f"   💡 Some videos will be reused multiple times")
+    elif len(valid_video_items) >= needed_clips * 1.5:
+        logger.success(f"   ✅ Excellent diversity! {len(valid_video_items)} videos for ~{needed_clips} clips")
+    else:
+        logger.info(f"   ✅ Good pool size: {len(valid_video_items)} videos for ~{needed_clips} clips")
 
     # Helper function for parallel downloads
     def download_single_video(item):
