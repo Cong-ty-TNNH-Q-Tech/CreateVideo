@@ -273,6 +273,9 @@ def download_videos(
     )
     logger.info(f"total unique video URLs: {len(global_video_urls)}")
 
+    # Calculate needed clips for quality checks
+    needed_clips = int(audio_duration / max_clip_duration) if max_clip_duration > 0 else 1
+
     # Create balanced selection from all search terms with improved algorithm
     valid_video_items = []
     valid_video_urls = set()
