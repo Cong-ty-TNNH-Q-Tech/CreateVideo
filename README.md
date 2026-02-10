@@ -161,7 +161,29 @@ Script sẽ tự động:
 | **docker-build-optimized.yml** | Push to main/develop, PRs | Build, optimize & deploy production images |
 | **docker-quick-build.yml** | Manual dispatch | Quick test builds without optimization |
 ## � Tài Liệu Hướng Dẫn
+### 🎯 Tối Ưu Chất Lượng Video (MỚI!)
 
+**Video bị lặp hoặc không liên quan?** Xem hướng dẫn tối ưu:
+
+📘 **[docs/QUICK_SETTINGS_REFERENCE.md](docs/QUICK_SETTINGS_REFERENCE.md)** - Quick fix settings
+
+📗 **[docs/VIDEO_QUALITY_OPTIMIZATION.md](docs/VIDEO_QUALITY_OPTIMIZATION.md)** - Complete guide
+
+**Giải quyết:**
+- ✅ **Video bị lặp** → Set `Max Video Reuse = 1`
+- ✅ **Video không liên quan** → Tăng `Similarity Threshold = 0.70`
+- ✅ **Tối ưu diversity** → Tăng `Search Pool Size = 120`
+
+**Cấu hình khuyến nghị:**
+```yaml
+Video Concat Mode: Semantic Text Alignment
+Max Video Reuse: 1             # Không lặp video
+Search Pool Size: 120           # Nhiều lựa chọn
+Similarity Threshold: 0.70      # Video liên quan
+Enable Image Similarity: Yes    # +30% accuracy
+```
+
+---
 ### Jupyter Notebook - Hướng Dẫn Cài Đặt Nhanh
 
 Chúng tôi cung cấp một Jupyter Notebook chi tiết để giúp bạn bắt đầu nhanh chóng:
