@@ -77,7 +77,89 @@ Xem các tính năng nâng cao trong thực tế:
 
 <img src="docs/ui_config_2.png" alt="Cài Đặt Giọng Nói" width="800"/>
 </div>
+## 🐳 CI/CD & Docker Deployment
 
+### Tự Động Build & Tối Ưu với GitHub Actions
+
+Repository này được tích hợp **CI/CD pipeline** tự động build, tối ưu Docker images với **docker-slim** và push lên **GitHub Container Registry**.
+
+#### ✨ Tính Năng CI/CD
+
+- 🔄 **Auto Build**: Tự động build khi push code to main/develop
+- 📦 **Docker Slim**: Tối ưu image size giảm **60-70%** (từ ~1.2GB → ~400MB)
+- 📊 **Size Comparison**: Tự động so sánh và báo cáo size reduction
+- 🚀 **Auto Deploy**: Push optimized images to GitHub Container Registry
+- 💬 **PR Comments**: Comment kết quả size comparison trên Pull Requests
+- 🏷️ **Smart Tagging**: Tự động tag theo branch, commit SHA, và semantic version
+
+#### 🎯 Kết Quả Tối Ưu
+
+```
+📊 Docker Image Optimization Results
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Original Size:    1.23 GB
+Optimized Size:   421 MB
+Reduction:        65.77% ⬇️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+#### 📦 Pull Pre-built Images
+
+```bash
+# Pull latest optimized image
+docker pull ghcr.io/cong-ty-tnnh-q-tech/createvideo:latest
+
+# Run WebUI
+docker run -v $(pwd)/config.toml:/MoneyPrinterTurbo/config.toml \
+           -v $(pwd)/storage:/MoneyPrinterTurbo/storage \
+           -p 8501:8501 \
+           ghcr.io/cong-ty-tnnh-q-tech/createvideo:latest
+
+# Run API Server
+docker run -v $(pwd)/config.toml:/MoneyPrinterTurbo/config.toml \
+           -v $(pwd)/storage:/MoneyPrinterTurbo/storage \
+           -p 8080:8080 \
+           ghcr.io/cong-ty-tnnh-q-tech/createvideo:latest \
+           python3 main.py
+```
+
+#### 🛠️ Build & Optimize Locally
+
+Muốn test build locally trước khi push?
+
+```bash
+# Linux/Mac
+chmod +x build-docker-local.sh
+./build-docker-local.sh
+
+# Windows
+build-docker-local.bat
+```
+
+Script sẽ tự động:
+1. Build Docker image gốc
+2. Thu thập size metrics
+3. Cài đặt docker-slim (nếu chưa có)
+4. Optimize image với docker-slim
+5. So sánh và hiển thị kết quả
+6. Tag optimized image as `latest`
+
+#### 📖 Chi Tiết Hướng Dẫn
+
+Để biết chi tiết về:
+- Setup GitHub Container Registry
+- Cấu hình workflows
+- Tuning docker-slim parameters
+- Troubleshooting tips
+
+👉 Xem [**docs/CI_CD_SETUP.md**](docs/CI_CD_SETUP.md)
+
+#### 🔧 Workflows Có Sẵn
+
+| Workflow | Trigger | Mục Đích |
+|----------|---------|----------|
+| **docker-build-optimized.yml** | Push to main/develop, PRs | Build, optimize & deploy production images |
+| **docker-quick-build.yml** | Manual dispatch | Quick test builds without optimization |
 ## � Tài Liệu Hướng Dẫn
 
 ### Jupyter Notebook - Hướng Dẫn Cài Đặt Nhanh

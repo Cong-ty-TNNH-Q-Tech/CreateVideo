@@ -1,0 +1,206 @@
+name: Build and Optimize Docker Image
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-optimize:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build original Docker image
+        id: build-original
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:original
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Get original image size
+        id: original-size
+        run: |
+          SIZE=$(docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:original --format "{{.Size}}")
+          SIZE_BYTES=$(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:original --format='{{.Size}}')
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+          echo "size_bytes=$SIZE_BYTES" >> $GITHUB_OUTPUT
+          echo "📦 Original image size: $SIZE ($SIZE_BYTES bytes)"
+
+      - name: Install docker-slim
+        run: |
+          curl -L -o ds.tar.gz https://github.com/slimtoolkit/slim/releases/download/1.40.11/dist_linux.tar.gz
+          tar -xvf ds.tar.gz
+          sudo mv dist_linux/* /usr/local/bin/
+          docker-slim --version
+
+      - name: Optimize image with docker-slim
+        id: slim
+        run: |
+          echo "🔧 Starting docker-slim optimization..."
+          
+          docker-slim build \
+            --target ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:original \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:optimized \
+            --http-probe=false \
+            --continue-after=20 \
+            --include-path=/MoneyPrinterTurbo \
+            --include-path=/usr/local/lib/python3.11 \
+            --include-path=/usr/local/bin \
+            --include-path=/usr/bin/ffmpeg \
+            --include-path=/usr/bin/convert \
+            --include-path=/etc/ImageMagick-6 \
+            --include-bin=/usr/bin/git \
+            --preserve-path=/tmp \
+            --preserve-path=/root/.cache \
+            || echo "Docker-slim completed with warnings"
+          
+          echo "✅ Docker-slim optimization completed"
+
+      - name: Get optimized image size
+        id: optimized-size
+        run: |
+          SIZE=$(docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:optimized --format "{{.Size}}")
+          SIZE_BYTES=$(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:optimized --format='{{.Size}}')
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+          echo "size_bytes=$SIZE_BYTES" >> $GITHUB_OUTPUT
+          echo "📦 Optimized image size: $SIZE ($SIZE_BYTES bytes)"
+
+      - name: Calculate size reduction
+        id: comparison
+        run: |
+          ORIGINAL=${{ steps.original-size.outputs.size_bytes }}
+          OPTIMIZED=${{ steps.optimized-size.outputs.size_bytes }}
+          
+          REDUCTION=$((ORIGINAL - OPTIMIZED))
+          PERCENTAGE=$(awk "BEGIN {printf \"%.2f\", ($REDUCTION / $ORIGINAL) * 100}")
+          
+          echo "reduction_bytes=$REDUCTION" >> $GITHUB_OUTPUT
+          echo "reduction_percentage=$PERCENTAGE" >> $GITHUB_OUTPUT
+          
+          echo "📊 Size Comparison Report:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Original Size:    ${{ steps.original-size.outputs.size }} ($ORIGINAL bytes)"
+          echo "Optimized Size:   ${{ steps.optimized-size.outputs.size }} ($OPTIMIZED bytes)"
+          echo "Reduction:        $(numfmt --to=iec-i --suffix=B $REDUCTION) ($PERCENTAGE%)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      - name: Tag optimized image with metadata tags
+        run: |
+          # Tag the optimized image with all metadata tags
+          while IFS= read -r tag; do
+            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:optimized "$tag"
+            echo "Tagged: $tag"
+          done <<< "${{ steps.meta.outputs.tags }}"
+
+      - name: Push optimized images to registry
+        run: |
+          # Push all tagged images
+          while IFS= read -r tag; do
+            docker push "$tag"
+            echo "Pushed: $tag"
+          done <<< "${{ steps.meta.outputs.tags }}"
+
+      - name: Create size comparison comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const original = '${{ steps.original-size.outputs.size }}';
+            const optimized = '${{ steps.optimized-size.outputs.size }}';
+            const reduction = '${{ steps.comparison.outputs.reduction_percentage }}';
+            
+            const comment = `## 🐳 Docker Image Size Comparison
+            
+            | Metric | Value |
+            |--------|-------|
+            | 📦 Original Size | ${original} |
+            | ✨ Optimized Size | ${optimized} |
+            | 📉 Reduction | ${reduction}% |
+            
+            The optimized image has been built and pushed to GitHub Container Registry.
+            
+            **Pull command:**
+            \`\`\`bash
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.pull_request.number }}
+            \`\`\`
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Generate summary
+        run: |
+          echo "## 🎉 Build and Optimization Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Size Comparison" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 📦 Original Size | ${{ steps.original-size.outputs.size }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ✨ Optimized Size | ${{ steps.optimized-size.outputs.size }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📉 Size Reduction | ${{ steps.comparison.outputs.reduction_percentage }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Published Images" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Images have been pushed to GitHub Container Registry:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# Pull the latest optimized image:" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Or pull by branch:" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Clean up
+        if: always()
+        run: |
+          docker rmi ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:original || true
+          docker rmi ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:optimized || true

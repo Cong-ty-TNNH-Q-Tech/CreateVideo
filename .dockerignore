@@ -8,6 +8,10 @@ __pycache__/
 *.pyw
 *.pyi
 *.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
 # Exclude development and local files
 .env
@@ -18,7 +22,42 @@ __pycache__/
 # Exclude version control system files
 .git/
 .gitignore
+.gitattributes
 .svn/
 
+# Exclude CI/CD files
+.github/
+
+# Exclude documentation and tests
+docs/
+test/
+tests/
+notebooks/
+*.ipynb
+*.md
+!README.md
+
+# Exclude IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Exclude OS files
+.DS_Store
+Thumbs.db
+
+# Exclude Docker files (not needed in image)
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Exclude storage and config (should be mounted as volumes)
 storage/
 config.toml
+config.example.toml
+
+# Exclude large binary files if not needed
+reference_audio/*.wav
+resource/songs/*.mp3
