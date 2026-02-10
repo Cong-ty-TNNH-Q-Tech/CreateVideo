@@ -25,6 +25,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Lowercase repository name
+        id: repo
+        run: |
+          echo "name=${GITHUB_REPOSITORY@L}" >> $GITHUB_OUTPUT
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -39,7 +44,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -56,15 +61,15 @@ jobs:
           file: ./Dockerfile
           push: false
           load: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:original
+          tags: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:original
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Get original image size
         id: original-size
         run: |
-          SIZE=$(docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:original --format "{{.Size}}")
-          SIZE_BYTES=$(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:original --format='{{.Size}}')
+          SIZE=$(docker images ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:original --format "{{.Size}}")
+          SIZE_BYTES=$(docker inspect ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:original --format='{{.Size}}')
           echo "size=$SIZE" >> $GITHUB_OUTPUT
           echo "size_bytes=$SIZE_BYTES" >> $GITHUB_OUTPUT
           echo "📦 Original image size: $SIZE ($SIZE_BYTES bytes)"
@@ -82,8 +87,8 @@ jobs:
           echo "🔧 Starting docker-slim optimization..."
           
           docker-slim build \
-            --target ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:original \
-            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:optimized \
+            --target ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:original \
+            --tag ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:optimized \
             --http-probe=false \
             --continue-after=20 \
             --include-path=/MoneyPrinterTurbo \
@@ -102,8 +107,8 @@ jobs:
       - name: Get optimized image size
         id: optimized-size
         run: |
-          SIZE=$(docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:optimized --format "{{.Size}}")
-          SIZE_BYTES=$(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:optimized --format='{{.Size}}')
+          SIZE=$(docker images ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:optimized --format "{{.Size}}")
+          SIZE_BYTES=$(docker inspect ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:optimized --format='{{.Size}}')
           echo "size=$SIZE" >> $GITHUB_OUTPUT
           echo "size_bytes=$SIZE_BYTES" >> $GITHUB_OUTPUT
           echo "📦 Optimized image size: $SIZE ($SIZE_BYTES bytes)"
@@ -131,7 +136,7 @@ jobs:
         run: |
           # Tag the optimized image with all metadata tags
           while IFS= read -r tag; do
-            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:optimized "$tag"
+            docker tag ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:optimized "$tag"
             echo "Tagged: $tag"
           done <<< "${{ steps.meta.outputs.tags }}"
 
@@ -164,7 +169,7 @@ jobs:
             
             **Pull command:**
             \`\`\`bash
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.pull_request.number }}
+            docker pull ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:pr-${{ github.event.pull_request.number }}
             \`\`\`
             `;
             
@@ -193,14 +198,14 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "# Pull the latest optimized image:" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:latest" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "# Or pull by branch:" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Clean up
         if: always()
         run: |
-          docker rmi ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:original || true
-          docker rmi ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:optimized || true
+          docker rmi ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:original || true
+          docker rmi ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:optimized || true

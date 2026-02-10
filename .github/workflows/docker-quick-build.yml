@@ -26,6 +26,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Lowercase repository name
+        id: repo
+        run: |
+          echo "name=${GITHUB_REPOSITORY@L}" >> $GITHUB_OUTPUT
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -41,7 +46,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}
           tags: |
             type=raw,value=test-{{sha}}
             type=raw,value=test-latest
@@ -65,13 +70,13 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Image Details" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" >> $GITHUB_STEP_SUMMARY
+          docker images ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }} --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" >> $GITHUB_STEP_SUMMARY
 
       - name: Test run container
         if: ${{ !inputs.push_to_registry }}
         run: |
           echo "🧪 Testing container..."
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-latest"
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:test-latest"
           
           # Test if container starts
           docker run --rm -d --name test-container "$IMAGE_TAG" sleep 30
@@ -94,7 +99,7 @@ jobs:
             echo "### 🚀 Images Pushed to Registry" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-            echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-latest" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:test-latest" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           else
             echo "### 📦 Image Built Locally" >> $GITHUB_STEP_SUMMARY
