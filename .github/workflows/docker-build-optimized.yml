@@ -55,7 +55,7 @@ jobs:
 
       - name: Build original Docker image
         id: build-original
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
