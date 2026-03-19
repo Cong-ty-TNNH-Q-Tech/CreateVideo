@@ -23,7 +23,7 @@ nvidia-nvjitlink-cu12==12.4.127
 nvidia-nvtx-cu12==12.4.127
 
 # cuDNN 9.x (Primary Installation)
-nvidia-cudnn-cu12==9.1.0.70
+nvidia-cudnn-cu12==9.20.0.48
 
 # Additional ML/Audio Libraries
 transformers>=4.21.0
