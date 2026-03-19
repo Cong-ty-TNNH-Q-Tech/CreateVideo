@@ -150,7 +150,7 @@ jobs:
 
       - name: Create size comparison comment
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const original = '${{ steps.original-size.outputs.size }}';
